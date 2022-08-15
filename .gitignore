@@ -1,0 +1,3 @@
+.ipynb_checkpoints/
+catboost_info/
+data/synthetic_db_with_risk_factors_and_deltas.csv
