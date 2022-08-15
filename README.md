@@ -10,7 +10,7 @@ The steps involved in this process are described in this repository.
 1. Cardiac Image analysis (ukbb_cardiac)
 Automated pipeline for image segmentation and motion analysis.
 
-2. Predicting cardiovascular age
+2. [Predicting cardiovascular age](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/blob/main/analysis_steps.Rmd)
 
 3. Phenotype analysis
 
