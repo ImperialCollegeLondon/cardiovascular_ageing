@@ -7,7 +7,7 @@ Cardiovascular ageing is a complex interaction of physiological processes leadin
 
 The steps involved in this process are described in this repository.
 
-* [Cardiac Image analysis (ukbb_cardiac)](https://github.com/baiwenjia/ukbb_cardiac)   
+1. [Cardiac Image analysis (ukbb_cardiac)](https://github.com/baiwenjia/ukbb_cardiac)   
 Automated pipeline for image segmentation and motion analysis.
 
 2. Predicting cardiovascular age
