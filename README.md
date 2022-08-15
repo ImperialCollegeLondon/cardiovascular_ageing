@@ -10,16 +10,16 @@ The steps involved in this process are described in this repository.
 1. [Cardiac Image analysis (ukbb_cardiac)](https://github.com/baiwenjia/ukbb_cardiac)   
 Automated pipeline for image segmentation and motion analysis.
 
-2. Predicting cardiovascular age
+2. [Predicting cardiovascular age](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/predicting%20cardiac%20age)
 
-3. [Phenotype analysis](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/blob/main/analysis_steps.Rmd)
+3. [Phenotype analysis](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis)
 
-4. Genetic analysis 
+4. [Genetic analysis](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis 
 
-5. PheWAS
+5. [PheWAS](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/PheWAS)
 
 ## License
-Distributed under the GNU GENERAL PUBLIC LICENSE license. See LICENSE for more information.
+Distributed under an MIT LICENSE license. See LICENSE for more information.
 
 ## Citation
 TBC
