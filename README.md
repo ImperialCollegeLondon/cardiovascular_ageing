@@ -18,8 +18,8 @@ Automated pipeline for image segmentation and motion analysis.
 
 5. PheWAS
 
-### License
+## License
 Distributed under the GNU GENERAL PUBLIC LICENSE license. See LICENSE for more information.
 
- ## Citation
+## Citation
 TBC
