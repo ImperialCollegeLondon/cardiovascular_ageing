@@ -11,7 +11,6 @@ The steps involved in this process are described in this repository.
 Automated pipeline for image segmentation and motion analysis.
 
 2. [Predicting cardiovascular age](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/predicting%20cardiac%20age)
-
 CatBoost model to predict age from a dataset comprising cardiac MRI derived phenotypes, and performing bias correction calculation for onward analysis. A cardiovascular age gap ("cardiovascular age delta") is generated for each subject. 
 
 3. [Phenotype analysis](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis)
