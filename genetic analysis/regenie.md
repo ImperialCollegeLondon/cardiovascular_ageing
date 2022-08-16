@@ -100,7 +100,7 @@ done
 ```
 
 ## REGENIE Step 2 - Burden test
-Memory error and gene processing errors were randomly encountered. In order to resolve this, break each chromosomes into chunks, this got me through to processing whole-genome wide gene sets.
+Memory error and gene processing errors were randomly encountered. In order to resolve this, break each chromosomes into smaller chunks. Finally it got me through to processing all gene sets across the whole genome.
 
 1. Generate chunks
 ```
