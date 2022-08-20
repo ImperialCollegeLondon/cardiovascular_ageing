@@ -1,0 +1,3 @@
+[submodule "ukbb_cardiac"]
+	path = ukbb_cardiac
+	url = https://github.com/baiwenjia/ukbb_cardiac.git
