@@ -19,11 +19,11 @@ Automated pipeline for image segmentation and motion analysis.
 - Assessing associations between cardiovascular age delta and categorical (e.g. presence of disease) / continuous risk factors (e.g. amount of alcohol consumed per day) 
 
 4. [Genetic analysis](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis) 
-- Assessing associations between cardiovascular age delta and genetic common and rare variants. 
-- Computation of polygenic risk score (PRS). 
+- Assessing associations between cardiovascular age delta and genetic common and rare variants. [COMMON VARIANT ANALYSIS NEEDS TO BE UPLOADED]
+- Computation of polygenic risk score (PRS). [NEEDS TO BE UPLOADED]
 
 5. [PheWAS](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/PheWAS)
-- Assessing associations between cardiovascular age delta PRS and an unbiased selection of phenotypes from the UK Biobank dataset. 
+- Assessing associations between cardiovascular age delta PRS and an unbiased selection of phenotypes from the UK Biobank dataset. [NEEDS TO BE UPLOADED]
 
 ## License
 Distributed under an MIT LICENSE license. See LICENSE for more information.
