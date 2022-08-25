@@ -1,4 +1,4 @@
-# Genetic associations of cardiovascular ageing
+# Environmental and genetic predictors of human cardiovascular ageing
 
 ## Abstract
 Cardiovascular ageing is a complex interaction of physiological processes leading to accumulated irreversible damage at cellular, tissue and organ level. Here, we use machine learning cardiac imaging analysis to predict cardiovascular age in UK Biobank participants to identify environmental modifiers and associated common genetic variants to provide insights into this process and provide targets to attenuate ageing. 
