@@ -1,11 +1,18 @@
-# "Cardiovascular age-delta GWAS and Burden tests"
+# "Cardiovascular age-delta GWAS and Burden tests on the UKB Exome data"
 @changlubio
 
-## High quality common SNPs set
-1. Liftover array data to GRCh38 (https://github.com/dnanexus-rnd/liftover_plink_beds)
-2. Quality check with Plink
+This is a step-by-step tutorial to perform genome-wide association and gene burden test on the UKB exomes using a pre-generated phenotype 'age-delta', using [Regenie](https://rgcgithub.github.io/regenie/) and the [UKB-RAP](https://dnanexus.gitbook.io/uk-biobank-rap/science-corner/gwas-ex#regenie-step-1). Codes were run using the dx command line tools and the Regenie in the Swiss Army Knife app. Major steps include:
 
-### 1. Liftover
+1. Generation of high quality common (HQ-common) SNPs set.
+2. Run Regenie step 1 on the HQ-common SNPs to fit a whole genome regression model that captures a good fraction of the phenotype variance attributable to genetic effects.
+3. Run Regenie step 2 to test for association with the phenotype conditional upon the prediction from the step 1. 
+
+## HQ common SNPs set
+To acquire a set of HQ common SNPs, we first converted the array data to GRCh38. Plink2 was then used to do quality check.
+
+### (1) Liftover
+Liftover was performed on RAP following https://github.com/dnanexus-rnd/liftover_plink_beds. It took 22.5h. 803700 variants and 488377 people were retained in the final set; total genotyping rate is 0.969609.
+
 ```
 $java -jar dxCompiler-2.10.2.jar compile liftover_plink_beds/liftover_plink_beds.wdl 
 => workflow-GFZYPGQJ4fX339BGG4KPxB31 
@@ -13,9 +20,7 @@ $dx download /Derived/Genotypes/grch38/liftover_input.json
 $dx run workflow-GFZYPGQJ4fX339BGG4KPxB31 -f liftover_input.json --brief --destination /Derived/Genotypes/grch38/
 => analysis-GFb4zy0J4fX50p4Q9zPxjjb6
 ```
-Analysis took 22h 18m on RAP. Merged:
-
-Total genotyping rate is 0.969609. 803700 variants and 488377 people pass filters and QC. 
+Outputs are in Derived/Genotypes/grch38/:
 
 ukb_GRCh38_full_analysis_set_plus_decoy_hla_merged.bed  
 ukb_GRCh38_full_analysis_set_plus_decoy_hla_merged.bim  
@@ -30,26 +35,22 @@ ukb_c1-22_GRCh38_full_analysis_set_plus_decoy_hla_merged.bim
 ukb_c1-22_GRCh38_full_analysis_set_plus_decoy_hla_merged.fam  
 ukb_c1-22_GRCh38_full_analysis_set_plus_decoy_hla_merged.log 
 
-### 2. Quality check
+### (2) Quality check
 ```
 RAP-> Swiss Army Knife-> command line->  
 plink2 
 --bfile /mnt/project/Derived/Genotypes/grch38/ukb_c1-22_GRCh38_full_analysis_set_plus_decoy_hla_merged 
 --out 500K_array_snps_GRCh38_qc_pass 
---mac 100 
---maf 0.01 
---hwe 1e-15 
---mind 0.1 
---geno 0.1 
---write-snplist 
---write-samples 
+--mac 100 --maf 0.01 --hwe 1e-15 
+--mind 0.1 --geno 0.1 
+--write-snplist --write-samples 
 --no-id-header 
 --threads 8 
 ```
 
 ## REGENIE Step 1
 Using `eid_andcardiacAGE_someadj_May2022.csv` the unadjusted column of aged-delta
-See also the DNANexus gitbook [here](https://dnanexus.gitbook.io/uk-biobank-rap/science-corner/gwas-ex#regenie-step-1).
+
 ```
 RAP-> Swiss Army Knife-> command line->  
 
