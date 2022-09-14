@@ -50,9 +50,14 @@ plink2
 --no-id-header 
 --threads 8 
 ```
+Participants:
+(In the derived phenotypes folder on UKB RAP)
+- Restricted to Europeans who have predicted Age-delta: cardiac_age_cmri/regenie_Jul2022/eid_andcardiacAGE_someadj_May2022.txt
+- Filtered for all of relatedness, aneuploidy, sexmismatch, heterozygosity outliers (2503 less) by Christian: cardiac_age_cmri/plink_May2022/plink_imputed_29k_european/catb_delta_with_t1_bc_cole_europeans29k.pheno
+- Restricted to samples with over 10% genotyping rate: cardiac_age_cmri/regenie_Aug2022/500K_array_snps_GRCh38_qc_pass.id
+- Restricted further to samples after Christian's quality check: cardiac_age_cmri/regenie_Aug2022/christian_qc_sample.id
 
 ## REGENIE Step 1
-Using `eid_andcardiacAGE_someadj_May2022.csv` the unadjusted column of aged-delta
 
 ```
 RAP-> Swiss Army Knife-> command line->  
@@ -104,7 +109,7 @@ done
 ```
 
 ## REGENIE Step 2 - Burden test
-Memory error and gene processing errors were randomly encountered. In order to resolve this, break each chromosomes into smaller chunks. Finally it got me through to processing all gene sets across the whole genome.
+Chromosomes were broken into smaller chunks to avoid memory errors.
 
 1. Generate chunks
 ```
@@ -135,10 +140,6 @@ do
             --aaf-bins 0.01,0.001 --bsize 200 \
             --out agedelta_regenie_burden_02_$chrom_b0_v1.chunk_$n
             "
-            # echo $cmd
-            # --set-list $path_to_450kwes_helper_files/ukb23149_450k_OQFE.sets.txt.gz  \
-            # --extract-setlist \"GRHL3(ENSG00000158055)\" \
-            # --exclude $path_to_450kwes_helper_files/ukb23149_450k_OQFE.90pct10dp_qc_variants.txt \
             dx run swiss-army-knife -icmd="$cmd" \
                 --destination "$destination_dir" \
                 -y --brief \
