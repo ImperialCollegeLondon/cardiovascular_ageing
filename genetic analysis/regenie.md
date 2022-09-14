@@ -36,6 +36,9 @@ ukb_c1-22_GRCh38_full_analysis_set_plus_decoy_hla_merged.fam
 ukb_c1-22_GRCh38_full_analysis_set_plus_decoy_hla_merged.log 
 
 ### (2) Quality check
+
+For SNPs in Chromosome 1-22, require: MAC > 100, MAF > 1%, HWE p-value > 1e-15, genotyping missingness < 10%; also require sample missingness < 10%.
+
 ```
 RAP-> Swiss Army Knife-> command line->  
 plink2 
