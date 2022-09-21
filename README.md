@@ -8,7 +8,7 @@ Cardiovascular ageing is a complex interaction of physiological processes leadin
 The steps involved in this process are described in this repository.
 
 1. **Cardiac Image analysis**
-Automated pipeline for image segmentation and motion analysis [code](https://github.com/baiwenjia/ukbb_cardiac/tree/2b6d6371be9a666a41627926324030c31897f877)   
+- Automated pipeline for image segmentation and motion analysis [code](https://github.com/baiwenjia/ukbb_cardiac/tree/2b6d6371be9a666a41627926324030c31897f877)   
 
 2. **Predicting cardiovascular age** 
 - CatBoost model to predict age from a dataset comprising cardiac MRI derived phenotypes [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/predicting%20cardiac%20age)
