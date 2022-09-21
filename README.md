@@ -15,8 +15,8 @@ Automated pipeline for image segmentation and motion analysis.
 - Subsequent bias correction on these predictions. 
 - A cardiovascular age gap ("cardiovascular age delta") is generated for each subject. 
 
-3. [Phenotype analysis](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis)
-- Assessing associations between cardiovascular age delta and categorical (e.g. presence of disease) / continuous risk factors (e.g. amount of alcohol consumed per day) 
+3. Phenotype analysis
+- Assessing associations between cardiovascular age delta and categorical (e.g. presence of disease) / continuous risk factors (e.g. amount of alcohol consumed per day) [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis)
 - Assessing associations between cardiovascular age delta and mortality [NEEDS TO BE UPLOADED- johannamielke]
 - Medication analysis [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/self-rep-med-analysis)
 
