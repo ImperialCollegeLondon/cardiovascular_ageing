@@ -18,7 +18,7 @@ Automated pipeline for image segmentation and motion analysis.
 3. [Phenotype analysis](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis)
 - Assessing associations between cardiovascular age delta and categorical (e.g. presence of disease) / continuous risk factors (e.g. amount of alcohol consumed per day) 
 - Assessing associations between cardiovascular age delta and mortality [NEEDS TO BE UPLOADED- johannamielke]
-- Medication analysis [NEEDS TO BE UPLOADED- EREN]
+- Medication analysis [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/self-rep-med-analysis)
 
 4. [Genetic analysis](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis) 
 - Assessing associations between cardiovascular age delta and genetic common and rare variants. [COMMON VARIANT ANALYSIS NEEDS TO BE UPLOADED- chbender]
