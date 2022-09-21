@@ -1,0 +1,355 @@
+---
+title: "CMRI coloc analysis"
+output: html_notebook
+---
+
+
+```{r setup}
+library(knitr)
+library(UKBRlib)
+require(tidyverse)
+require(bullseye)
+require(rtracklayer)
+library(readr)
+library(dplyr)
+library(data.table)
+getwd()
+WD <- "~/github/cardiacage/05_finemap_coloc"
+setwd(WD)
+print(dir())
+```
+
+```{r}
+
+mytrait <- "cardiacagegap_cmri_cole"
+win = 2e5
+#gw_nom = 5e-8
+#gw_nom <- 1e-5
+gw_nom <- 1e-1
+source("functions.R")
+
+# get sdY for coloc analysis
+xtab <- readr::read_csv("../04_check_kinship/eid_andcardiacAGE_someadj_May2022.csv", show_col_types = FALSE)
+sdY <- sd(xtab$catb_delta_with_t1_bc_cole)
+# downloaded median TPM GTEX v8, computed colwise sd
+# > quantile(log2(t(apply(x[,-c(1,2)], 2, sd))))
+# 0%       25%       50%       75%      100%
+# 7.734810  8.257904  8.744022  9.395977 10.221813
+sdY_gtex <- 8.744022
+DIR <- "02_eQTL_coloc_cmri"
+if(!dir.exists(DIR)) {
+  dir.create(DIR)
+}
+
+###### Set variants + genes for loop ####
+hits <- rbind(c("rs2042995", "TTN"),
+      c("rs698097", "MASP1"),
+      c("rs7795735", "ELN"),
+      c("rs1991860", "PI15"),
+      c("rs61886308", "PLCE1"),
+      c("rs10763764", "JCAD"),
+      c("rs2591075", "GPATCH2L"),
+      c("rs2986036", "NEURL1"),
+      c("rs2986036", "NEURL1-AS1"))
+
+colnames(hits) <- c("rs_id", "gene")
+hits <- tibble::as_tibble(hits)
+
+###### Collect summary stats for CMRI trait ####
+#{r loadgwas, eval=TRUE, echo=FALSE}
+# columnnames
+#new_names = c(rs_id="ID", chr="seqnames", pos="start", ref="REF", alt="ALT", p="P") # for consistency with open targets
+TFILE <- "../60_preparesumstats/plink_imputed_29k_european/compiled_data/summarystats_plink_imputed_29k_european_hg38.txt.gz"
+
+gene_traits <- readr::read_delim(TFILE, show_col_types = FALSE) %>%
+  dplyr::relocate(rs_id, chr, pos, ref, alt, p, BETA, SE, T_STAT) %>%
+  dplyr::arrange(p) %>%
+  #dplyr::filter(p <= 1e-5) %>%
+  dplyr::mutate(trait = mytrait) %>%
+  dplyr::relocate(trait)
+
+# get all transcript information from biomart
+# all_transcripts = get_biomart_transcripts() %>% mutate(strand = if_else(strand == -1, "-", "+"))
+all_transcripts = readRDS("../02_eqtl_coloc/all_transcripts_20220908.rds") %>% mutate(strand = if_else(strand == -1, "-", "+"))
+```
+
+```{r coloc_plots, fig.width=11, fig.height=14}
+# i <- 1
+for(i in 1:nrow(hits)) {
+  ###### Gene_annotation, eval=TRUE, cache=TRUE, message=FALSE, warning=FALSE, echo=FALSE} ####
+  # define target gene
+  #target_gene = "PI15"
+  target_gene <- hits$gene[i]
+  target_snp <-  hits$rs_id[i]
+  OUTFILE_PDF <- sprintf("%s/%s_%s.pdf", DIR,
+                         target_snp, target_gene)
+  if(file.exists(OUTFILE_PDF)) {
+    message(sprintf("Skipping %s / %s - already exists.", target_snp, target_gene))
+    next
+  }
+  message(sprintf("Fetching for %s / %s", target_snp, target_gene))
+
+  # expand the locus by +/- window, include neighboring genes
+  expanded_locus_transcripts <- map_dfr(target_gene, function(gene) {
+    target_transcript <- all_transcripts %>% dplyr::filter(external_gene_name == gene) %>% filter_best_transcript()
+    target_gene_name <- target_transcript %>% pull(external_gene_name) %>% unique()
+
+    all_transcripts %>% dplyr::filter(
+      chromosome_name == unique(target_transcript$chromosome_name),
+      exon_chrom_start >= min(target_transcript$exon_chrom_start) - win,
+      exon_chrom_end <= max(target_transcript$exon_chrom_end) + win) %>%
+      filter_best_transcript() %>%
+      dplyr::mutate(locus = target_gene_name) %>%
+      dplyr::mutate(kind = if_else(.$external_gene_name == target_gene_name, "target", "locus")) %>%
+      dplyr::rename(gene_name = external_gene_name) %>%
+      return()
+  })
+  target_locus_transcript <- expanded_locus_transcripts %>% dplyr::filter(gene_name == target_gene)
+  expanded_locus_genes <- expanded_locus_transcripts %>% dplyr::select(-starts_with("exon_")) %>% distinct()
+  target_ix = which(expanded_locus_genes$gene_name==target_gene)
+
+  # {r liftover}
+  min_coord <- min(expanded_locus_transcripts$exon_chrom_start)
+  max_coord <- max(expanded_locus_transcripts$exon_chrom_end)
+  # if there are no neighbors, make sure to include +/- window
+  no_neighbor_genes <- (min(target_locus_transcript$exon_chrom_start) == min_coord &
+                          max(target_locus_transcript$exon_chrom_end) == max_coord)
+  if(no_neighbor_genes) {
+    min_coord <- min_coord - win
+    max_coord <- max_coord + win
+  }
+  # transcript boundaries +/- window
+  region_38 <- expanded_locus_transcripts %>%
+    summarize(chrom = unique(chromosome_name),
+              start = min_coord,
+              end = max_coord,
+              strand = "+") %>%
+    GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns=T)
+  region_37 <- lift_over(region_38, "38_to_37", chain_loc = "~/gitlab/bullseye/r_data/")
+  # fix liftover errors
+  region_37 = region_37[as.character(GenomicRanges::seqnames(region_37)) %in% as.character(unique(GenomicRanges::seqnames(region_38)))]
+
+  ###### Get hit locus ####
+  message("Get hit locus....")
+  #```{r gethitlocus, echo=FALSE}
+  #snps <- c("rs1991860")
+  my_snps <- gene_traits %>%
+    dplyr::filter(rs_id %in% target_snp) %>%
+    dplyr::mutate(gene = target_gene) %>%
+    dplyr::select(chr, pos, rs_id, gene)
+  # e.g.:
+  # rs1991860 : dbsnp hg38positions: 74825583
+  #Sequence name	Change
+  #GRCh37.p13 chr 8	NC_000008.10:g.75737818C>T
+
+
+  #######  Find the lead trait variants ####
+  message("Find the lead trait variants....")
+  #```{r eqtl_look_at_biomarker_locus, echo=FALSE, message=FALSE, warning=FALSE, include=TRUE, eval=TRUE, fig.width=8.5}
+  # select the trait
+  # what is the most significant variant for the traits?
+  #gw_nom <- 1e-5
+  lead_snps_all = gene_traits %>% arrange(p) %>% dplyr::filter(p <= gw_nom)
+  if(dim(lead_snps_all)[1]==0) {
+    print(paste("There are no significant lead variants for the biomarkers/endpoint of interest: it is not possible to look for colocalisation of eQTLs ..."))
+    is_lead_snps = FALSE
+  } else {
+    is_lead_snps = TRUE
+  }
+  if(is_lead_snps) {
+    # get the summary statistics for this signal
+    bps <- 3000000
+    gene_eqtl_trait <- gene_traits %>%
+      dplyr::filter(chr == my_snps$chr & pos >= my_snps$pos - bps & pos <= my_snps$pos + bps) %>%
+      dplyr::arrange(p) %>%
+      dplyr::mutate(trait = factor(trait))
+    # exon plot. manhattan comes later
+    mylimits <- c(my_snps$pos - bps, my_snps$pos + bps)
+    mylimits <- range(gene_eqtl_trait$pos)
+    exons_plot = plot_exons(expanded_locus_transcripts, expand_exons=T, limits = mylimits)
+  }
+
+  ###### Search eQTL Catalog for possible lead eQTLs ####
+  message("Search eQTL Catalogs for possible lead eQTLs...")
+  #```{r eqtl_catalog, eval=TRUE, message=FALSE, warning=FALSE, cache=FALSE, include=TRUE, echo=FALSE}
+  if(is_lead_snps) { # there is a sig. trait snp, time to search ebi catalog ...
+    rnaseq_study_names = c("GTEx_V8","Alasoo_2018","BLUEPRINT","BrainSeq","GENCORD","GEUVADIS","HipSci","Lepik_2017","Nedelec_2016","Quach_2016","Schwartzentruber_2018","TwinsUK")#,"van_de_Bunt_2015"
+    #)
+    # study_names = get_ebi_eqtl_studies()
+    # study_names = study_names$study_accession
+    rsids_to_check_eqtl = gene_eqtl_trait$rs_id[which.min(gene_eqtl_trait$p)]
+    rsids_to_check_eqtl = rsids_to_check_eqtl[grepl("^rs[0-9]+$", rsids_to_check_eqtl)]
+    # for each variant get the study (tissue) p-value and gene
+    gene_ebi_eqtl_top = vector("list", length(rsids_to_check_eqtl))
+    names(gene_ebi_eqtl_top) = rsids_to_check_eqtl
+    for(i in 1:length(gene_ebi_eqtl_top)) {
+      gene_ebi_eqtl_top[[i]] = get_eqtl_ebi_top_hits(study_ids=rnaseq_study_names, variant_id=rsids_to_check_eqtl[i], p_upper=0.01)
+    }
+    gene_ebi_eqtl_top = bind_rows(gene_ebi_eqtl_top) %>% distinct()
+    if(nrow(gene_ebi_eqtl_top)==0) {
+      next
+    }
+
+    gene_ebi_eqtl_top_summ = gene_ebi_eqtl_top %>% group_by(study_id, qtl_group, gene_id) %>% dplyr::filter(p==min(p)) %>% summarise(molecular_trait_id=molecular_trait_id, p=p, tissue=tissue, quant_method=quant_method, rs_id=rs_id, pos=pos, chr=chr) %>% arrange(p) %>% mutate(context=paste(study_id, qtl_group, sep="_"))
+    gene_ebi_eqtl_top_summ$context = factor(gene_ebi_eqtl_top_summ$context, levels=rev(unique(gene_ebi_eqtl_top_summ$context)))
+    gene_ebi_eqtl_top_summ$tissue = factor(gene_ebi_eqtl_top_summ$tissue, levels=unique(gene_ebi_eqtl_top_summ$tissue))
+    gene_ebi_eqtl_top_summ$gene = expanded_locus_transcripts$gene_name[match(gene_ebi_eqtl_top_summ$gene_id, expanded_locus_transcripts$ensembl_gene_id)]
+
+    # get the summary stats for these loci
+    qtl_ix = as.list(1:dim(gene_ebi_eqtl_top_summ)[1])
+    gene_ebi_eqtl_locus = lapply(qtl_ix, function(x) get_eqtl_ebi(gene_ebi_eqtl_top_summ[x,]))
+    names(gene_ebi_eqtl_locus) = paste(gene_ebi_eqtl_top_summ$study_id, gene_ebi_eqtl_top_summ$qtl_group, sep="_")
+    gene_ebi_eqtl_locus = bind_rows(gene_ebi_eqtl_locus, .id="trait")
+    gene_ebi_eqtl_locus$gene = expanded_locus_transcripts$gene_name[match(gene_ebi_eqtl_locus$gene_id, expanded_locus_transcripts$ensembl_gene_id)]
+    # add eqtlgen
+    # TODO move eqtlgen summary stats to kumo
+    gene_eqtlgen = get_eqtl_gen(gene_id=expanded_locus_genes$ensembl_gene_id,
+                                chain_loc = "~/gitlab/bullseye/r_data/",
+                                summ_file="~/gitlab/bullseye/r_data/2019-12-11-cis-eQTLsFDR0.05-ProbeLevel-CohortInfoRemoved-BonferroniAdded.txt")
+
+    if(dim(gene_eqtlgen)[1]>0) {
+      eafs = lapply(gene_eqtlgen$rs_id, get_gnomadnfe_eaf) %>% bind_rows()
+      gene_eqtlgen = gene_eqtlgen %>% left_join(x-., y=eafs, by=c("rs_id"="rsId")) %>% dplyr::rename(eaf="gnomadNFE") %>% mutate(alt_ot=str_replace(id, "^([[:alnum:]]+)_([0-9]+)_([A-Z]+)_([A-Z]+)", "\\4"), ref_ot=str_replace(id, "^([[:alnum:]]+)_([0-9]+)_([A-Z]+)_([A-Z]+)", "\\3"))
+
+      # convert z-scores to betas
+      gene_eqtlgen$beta = gene_eqtlgen$Zscore / ((2*gene_eqtlgen$eaf*(1-gene_eqtlgen$eaf)*(gene_eqtlgen$NrSamples+gene_eqtlgen$Zscore^2)^0.5))
+      gene_eqtlgen$se = 1/(2*gene_eqtlgen$eaf*(1-gene_eqtlgen$eaf)*(gene_eqtlgen$NrSamples+gene_eqtlgen$Zscore^2)^0.5)
+
+      # check reference allele
+      gene_eqtlgen$flip = ifelse(gene_eqtlgen$ref!=gene_eqtlgen$ref_ot,1,0)
+      gene_eqtlgen$flip[is.na(gene_eqtlgen$flip)] = 0
+      gene_eqtlgen$ref[gene_eqtlgen$flip==1] = gene_eqtlgen$ref_ot[gene_eqtlgen$flip==1]
+      gene_eqtlgen$alt[gene_eqtlgen$flip==1] = gene_eqtlgen$alt_ot[gene_eqtlgen$flip==1]
+      gene_eqtlgen$beta[gene_eqtlgen$flip==1] = -gene_eqtlgen$beta[gene_eqtlgen$flip==1]
+
+    } else {
+      gene_eqtlgen = data.frame()
+    }
+
+    if(any(gene_eqtlgen$p < 0.001)) {
+      # add to summary stats for locus
+      gene_ebi_eqtl_locus = bind_rows(
+        gene_ebi_eqtl_locus,
+        gene_eqtlgen %>% dplyr::select(pos,chr,p,rs_id,alt,ref,gene_id,GeneSymbol,beta,se) %>% dplyr::rename(gene="GeneSymbol") %>% mutate(qtl_group="blood",type="eQTLGen",source="eqtl_gen",trait="blood")
+      )
+      # add lead eqtl for plotting
+      gene_ebi_eqtl_top_summ = bind_rows(
+        gene_ebi_eqtl_top_summ,
+        gene_eqtlgen %>% dplyr::slice_min(p, with_ties=FALSE) %>% dplyr::select(chr,pos,p,rs_id) %>% dplyr::mutate(context="eQTLGen_blood", gene=target_gene)
+      )
+    }
+  }
+
+
+  ###### Plot all signals in grid ####
+  #gw_nom <- 1e-3
+  gw_nom <- 1e-1
+  message("Plot all signals....")
+  tmp_plot_data <- bind_rows(gene_ebi_eqtl_locus %>% dplyr::mutate(chr = as.numeric(chr)), gene_eqtl_trait) %>%
+    dplyr::filter(p <= gw_nom) %>%
+    dplyr::mutate(neg_log10_pvalue = -log10(p)) %>%
+    #dplyr::filter(gene == target_gene)
+    dplyr::group_by(rs_id, trait, study_id, ref, alt, pos, chr) %>%
+    dplyr::summarise(p = min(p),
+                     gene = paste(sort(unique(gene)), collapse=","),
+                     #ref = paste(ref, collapse=","),
+                     #alt = paste(alt, collapse=","),
+                     is_lead_var = paste(sort(unique(gene)), collapse=","),
+                     .groups = "drop")
+  #View(tmp_plot_data %>%
+  #       dplyr::filter(rs_id == my_snps$rs_id) %>%
+  #       dplyr::select(trait, qtl_group, tissue_label, p, neg_log10_pvalue, study_id, molecular_trait_id, gene, ref, alt, is_lead_var))
+
+  myxlim <- range(tmp_plot_data$pos)
+  exons_plot = plot_exons(expanded_locus_transcripts, expand_exons=T, limits = myxlim) +
+    theme(plot.margin = unit(c(0.5,0,0,0), "cm"))
+
+
+  ###### Coloc analysis ####
+  # source("functions.R")
+  coloclist <- make_coloc_tests(gene_traits = gene_traits, gene_ebi_eqtl_locus = gene_ebi_eqtl_locus, myxlim = myxlim, sdY = sdY, sdY_gtex = sdY_gtex)
+  coloctests <- coloclist$coloctests
+  # colocukbr <- coloclist$coloctests_ukbrlib
+  # dplyr::bind_rows(lapply(colocukbr, function(x) {
+  #   x$posterior
+  # }))
+
+  # make coloc plots
+  tu <- unique(tmp_plot_data$trait)
+  plst <- list(exons = exons_plot)
+  for(tutrait in tu) {
+    tmpdat <- tmp_plot_data %>%
+      dplyr::filter(trait == tutrait)
+    if(!my_snps$rs_id %in% tmpdat$rs_id) {
+      # if we do not find our snp in the data, omit it
+      next
+    }
+    if(target_gene %in% c("GPATCH2L")) {
+      tmpdatcut <- 1e-4
+    } else {
+      tmpdatcut <- 1e-7
+    }
+    if(tmpdat %>%
+      dplyr::filter(rs_id == my_snps$rs_id) %>%
+      dplyr::pull(p) > tmpdatcut) {
+      next
+    }
+    # manhattan plot
+    if(tutrait %in% coloctests$trait) {
+      ptitle <- sprintf("%s: coloc H4 = %s",
+                        tutrait, format(coloctests %>% dplyr::filter(trait == tutrait) %>% dplyr::pull(PP.H4.abf), digits=4))
+    } else {
+      ptitle <- tutrait
+    }
+    px <- plot_manhattan(tmpdat, color=trait, legend=F, p_val_cutoff=1e-1, x_limits = myxlim) +
+      ggtitle(ptitle) +
+      ggplot2::xlab("") +
+      ggplot2::geom_point(data = tmpdat %>%
+                              dplyr::filter(rs_id == my_snps$rs_id),
+                            mapping = aes(x=pos, y=-log10(p)), color="blue", size=2) +
+      ggrepel::geom_text_repel(data = tmpdat %>%
+                                   dplyr::filter(rs_id == my_snps$rs_id),
+                                 mapping = aes(x=pos, y=-log10(p), label=my_snps$rs_id), color="blue") +
+      theme(plot.margin = unit(c(0.5,0,0,0), "cm"))
+    plst[[tutrait]] <- px
+  }
+  # reorder plots
+  mymanh <- match(mytrait, names(plst))
+  exmanh <- match("exons", names(plst))
+  restmanh <- setdiff(1:length(plst), c(mymanh, exmanh))
+  plst <- plst[c(restmanh, mymanh, exmanh)]
+
+  # and plot to pdf
+  #OUTFILE_PDF_ONECOL <- gsub("\\.pdf$", "_onecol.pdf", OUTFILE_PDF)
+  # length of plst determines number of columns
+  #nrcol <- 1
+  #fwidth <- 8
+  #fheight <- 3 * length(plst)
+  #pdf(file = OUTFILE_PDF_ONECOL, width=fwidth, height=fheight)
+  #px <- cowplot::plot_grid(plotlist = plst, ncol = nrcol) #, rel_heights = c(rep(1, length(plst)-1),1.3) )
+  #print(px)
+  #sapply(plst, print)
+  #dev.off()
+
+  # multiple columns
+  nrcol <- ceiling(sqrt(length(plst)))
+  fwidth <- 4 * nrcol
+  fheight <- 3 * nrcol
+  #pdf(file = OUTFILE_PDF, width=fwidth, height=fheight)
+  px <- cowplot::plot_grid(plotlist = plst, ncol = nrcol)
+  print(px)
+  #dev.off()
+
+
+
+
+  rm(plst)
+  rm(tmpdat)
+  rm(tmp_plot_data)
+  rm(px)
+  gc()
+}
+
+
+```
+
