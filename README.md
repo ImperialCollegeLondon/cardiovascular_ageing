@@ -17,7 +17,7 @@ The steps involved in this process are described in this repository.
 3. **Phenotype analysis**
 - Assessing associations between cardiovascular age delta and categorical (e.g. presence of disease) / continuous risk factors (e.g. amount of alcohol consumed per day) [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis)
 - Assessing associations between cardiovascular age delta and mortality [NEEDS TO BE UPLOADED- johannamielke]
-- Medication analysis [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/self-rep-med-analysis)
+- Medication analysis [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis/self-rep-med-analysis)
 
 4. **Genetic analysis**
 - Assessing associations between cardiovascular age delta and genetic common variants. [COMMON VARIANT ANALYSIS NEEDS TO BE UPLOADED- chbender]
