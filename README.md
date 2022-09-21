@@ -7,8 +7,8 @@ Cardiovascular ageing is a complex interaction of physiological processes leadin
 
 The steps involved in this process are described in this repository.
 
-1. [Cardiac Image analysis (ukbb_cardiac)](https://github.com/baiwenjia/ukbb_cardiac/tree/2b6d6371be9a666a41627926324030c31897f877)   
-Automated pipeline for image segmentation and motion analysis.
+1. **Cardiac Image analysis**
+Automated pipeline for image segmentation and motion analysis [code](https://github.com/baiwenjia/ukbb_cardiac/tree/2b6d6371be9a666a41627926324030c31897f877)   
 
 2. **Predicting cardiovascular age** 
 - CatBoost model to predict age from a dataset comprising cardiac MRI derived phenotypes [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/predicting%20cardiac%20age)
@@ -24,7 +24,7 @@ Automated pipeline for image segmentation and motion analysis.
 - Assessing associations between cardiovascular age delta and genetic rare variants [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis) (update once neater structure)
 - Computation of Polygenic Risk Score (PRS) [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis/prs).
 
-5. [PheWAS](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/PheWAS)
+5. **PheWAS**
 - Assessing associations between cardiovascular age delta PRS and an unbiased selection of phenotypes from the UK Biobank dataset. [NEEDS TO BE UPLOADED- seanzheng33]
 
 ## License
