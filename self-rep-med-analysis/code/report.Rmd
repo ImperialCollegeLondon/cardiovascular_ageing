@@ -1,0 +1,833 @@
+---
+title: "Simple Medication Effect Analysis"
+subtitle: "Cardiac-MRI-based phenotype"
+author: "Eren El&ccedil;i"
+date: "2022-08-24"
+output: 
+  html_document:
+      theme: flatly
+      highlight: tango
+      toc: true
+      number_sections: true
+      df_print: paged
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(glmnet)
+library(kableExtra)
+library(UKBRlib)
+```
+
+
+```{r}
+source("./functions.R")
+```
+
+```{r}
+dfs <- read_csv("../data/Derived/dataframes_drugs_self_reported.csv.gz")
+```
+
+```{r}
+fits.df <- read_csv("../data/Derived/fits.csv")
+```
+
+```{r}
+fits.glm <- readRDS("../data/Derived/fits.glm.Rds")
+```
+
+## Characterizing age_delta quartiles
+
+```{r}
+dfs %>% 
+  select(SID, Drug, PriorMed) %>% 
+  pivot_wider(id_cols=SID,
+              names_from=Drug,
+              values_from=PriorMed) %>% 
+  inner_join(dfs %>% 
+               filter(Drug=="Statins") %>% # for example
+               select(-Drug, -PriorMed),
+               by="SID"
+               ) ->
+  quartiles.df
+```
+
+
+```{r}
+(quartiles.df$age_delta %>% 
+  quantile(probs=c(0,0.25, .5, .75,1)) -> age_delta.quantiles)
+```
+```{r}
+(sprintf("(%.1f, %.1f]",
+        age_delta.quantiles %>% head(-1),
+        age_delta.quantiles %>% tail(-1)
+        ) -> age_delta.quantiles.titles)
+```
+```{r}
+age_delta.quantiles %>% tail(-1) -> age_delta.quantiles
+```
+
+
+```{r}
+quartiles.df %>% 
+  mutate(age_delta_cat=case_when(
+    age_delta <= age_delta.quantiles[1] ~ names(age_delta.quantiles)[1],
+    age_delta <= age_delta.quantiles[2] ~ names(age_delta.quantiles)[2],
+    age_delta <= age_delta.quantiles[3] ~ names(age_delta.quantiles)[3],
+    T ~ "100%"
+  )) -> 
+  quartiles.df
+```
+
+
+```{r}
+quartiles.df %>% 
+  mutate(age_delta_cat=factor(age_delta_cat,
+                              levels=names(age_delta.quantiles),
+                              labels=age_delta.quantiles.titles,
+                              ordered=TRUE
+         )) ->
+  quartiles.df
+```
+
+
+```{r quartiles-characteristic-table}
+quartiles.df %>%
+  drop_na()%>%
+  select(-SID) %>% 
+  gtsummary::tbl_summary(
+    by=age_delta_cat,
+    label  = list(
+      age_delta   ~ "Cardiac Age gap",
+      CAD ~ "Coronary Artery Disease",
+      Hyperchol~"Hypercholesterolemia",
+      packyrs~ "Packs year of smoking",
+      alcoholintakegpd~ "Alcohol is g/day consumed"
+    ),
+    missing_text = "Missing",
+    digits = list(age_delta ~ c(1, 1),
+                  packyrs ~ c(2,1),
+                  alcoholintakegpd ~ c(1,1)
+                  )
+    
+  ) %>%
+  gtsummary::add_p()
+```
+```{r quartiles-characteristic-table-drugs-only}
+quartiles.df %>%
+  select(age_delta_cat,
+         Diuretics,
+         CCB,
+         ARB,
+         ACEi,
+         BB,
+         Digoxin,
+         Metformin,
+         Statins,
+         Sex,
+         Age,
+         age_delta
+         ) %>% 
+  drop_na()%>%
+  gtsummary::tbl_summary(
+    by=age_delta_cat,
+    label  = list(
+      age_delta   ~ "Cardiac Age gap"
+    ),
+    missing_text = "Missing",
+    digits = list(age_delta ~ c(1, 1)
+                  )
+    
+  ) %>%
+  gtsummary::add_p()
+```
+
+## Correlation of features
+
+```{r}
+quartiles.df %>% 
+  select(-SID,
+         -age_delta_cat
+         ) %>% 
+  mutate(Male=if_else(Sex=="Male", 1, 0)) %>% 
+  select(-Sex) %>% 
+  mutate_all(as.double) %>% 
+  as.matrix()->
+  X
+```
+
+```{r}
+Hmisc::rcorr(X, type="pearson") -> cor.pearson
+cor.pearson$r -> M
+```
+
+
+```{r feature-corr-plot, fig.width=7, fig.height=7}
+corrplot::corrplot( M,
+                   method="ellipse",
+                   type="lower",
+                   na.label='-', 
+                   tl.cex = 0.7, 
+                   order="AOE",
+                   tl.col="black",
+                   tl.srt=45,
+                   number.cex = 0.3) 
+```
+
+
+```{r feature-corr-plot-hclust, fig.width=7, fig.height=7}
+corrplot::corrplot( M,
+                   method="ellipse",
+                   type="lower",
+                   na.label='-', 
+                   tl.cex = 0.7, 
+                   order="hclust",
+                   tl.col="black",
+                   tl.srt=45,
+                   number.cex = 0.3) 
+```
+
+## Medication-Effect Overview
+
+### Forest plot
+
+```{r med-effect-forest-2, fig.height=6, fig.width=6}
+(fits.df  %>% 
+  filter(term=="PriorMed") %>% 
+  mutate(Adjustment=if_else(AdditionalMarkers==TRUE, "With SBP/DBP/HR", "Without SBP/DBP/HR")) %>% 
+  mutate(Adjustment=factor(Adjustment, levels=c("Without SBP/DBP/HR","With SBP/DBP/HR"), ordered=TRUE)) %>% 
+  ggplot(aes(x=Drug, y=estimate, ymin=conf.low, ymax=conf.high, color=Adjustment))+
+  geom_point( position=position_dodge(width=0.3))+
+  geom_linerange( position=position_dodge(width=0.3))+
+  coord_flip()+
+  xlab("Drug")+
+  ylab("Coefficient")+
+  geom_hline(yintercept=0, alpha=0.5, linetype="dashed")+
+  scale_color_manual(values = c("Without SBP/DBP/HR" = "red",
+                                    "With SBP/DBP/HR" = "forestgreen"
+                                    )) -> p)
+```
+
+```{r med-effect-forest-2-with-arrows, fig.height=5, fig.width=8}
+p+geom_segment(aes(y = 0.05, x = .55, yend = 3, xend = .55),
+                  arrow = arrow(length = unit(0.25, "cm")), show.legend=FALSE, color="black")+
+    geom_text(aes(y = 1.5, x = .725, label = "Drug increases cardiac age gap"), size=3, color="black") +
+geom_segment(aes(y = -0.05, x = .55, yend = -3, xend = .55),
+                  arrow = arrow(length = unit(0.25, "cm")), show.legend=FALSE, color="black")+
+    geom_text(aes(y = -1.5, x = .725, label = "Drug decreases cardiac age gap"), size=3, color="black")
+  
+```
+
+
+
+
+```{r med-effect-forest, fig.height=4, fig.width=4}
+(fits.df  %>% 
+  filter(term=="PriorMed") %>% 
+  filter(AdditionalMarkers==TRUE) %>% 
+  ggplot(aes(x=Drug, y=estimate, ymin=conf.low, ymax=conf.high))+
+  geom_point( )+
+  geom_linerange()+
+  coord_flip()+
+  xlab("Drug")+
+  ylab("Coefficient")+
+  geom_hline(yintercept=0, alpha=0.5, linetype="dashed") -> p)
+```
+
+
+```{r med-effect-forest-ukbrlib,fig.height=5, fig.width=8}
+fits.df  %>% 
+  filter(term=="PriorMed") %>% 
+  filter(AdditionalMarkers==TRUE) %>% 
+  mutate(n=round(fracPriorMed*nobs)) ->
+  phewas_results
+
+plot_data <- phewas_results %>%
+    dplyr::select(Drug, p.value, estimate, conf.high, conf.low, n) %>%
+    dplyr::mutate(p.value.str=sprintf("%.3f", p.value), beta.str=sprintf("%.2f", estimate))
+
+  parm <- plot_data %>% dplyr::mutate(mean=estimate,lower=conf.low,upper=conf.high) %>%
+    dplyr::select(mean, lower, upper)
+  parm <- rbind(rep(NA,3), parm)
+
+  labeltext <- plot_data %>% dplyr::select(Drug, n, beta.str, p.value.str)
+  if (nrow(labeltext)>1) {
+    labeltext <- as.matrix(sapply(labeltext, as.character))
+  }
+  labeltext <- rbind(c('Drug','N', 'Coefficient', 'P-Value'), labeltext)
+```
+
+
+```{r med-effect-forest-ukbrlib-2,fig.height=5, fig.width=8.25}
+fig_width <- 8
+forestplot::forestplot(labeltext=labeltext, 
+                       parm, 
+                       zero=0, 
+                       xlab='Coefficient',
+                       title = "Medication Effects", 
+                       is.summary=c(TRUE, rep(FALSE, nrow(plot_data))) ,
+                       txt_gp=forestplot::fpTxtGp(ticks=gpar(cex=1.2),xlab=gpar(cex=1.5), title = gpar(cex=2.0), cex=1.2), 
+                       graph.pos = 4,
+                       graphwidth = grid::unit(fig_width,"cm"), 
+                       lwd.zero=3, 
+                       lwd.ci=3)
+```
+
+
+### Table
+
+```{r}
+fits.df  %>% 
+  filter(term=="PriorMed") %>% 
+  mutate(Adjustment=if_else(AdditionalMarkers==TRUE, "With SBP/DBP/HR", "Without SBP/DBP/HR")) %>% 
+  mutate(Adjustment=factor(Adjustment, levels=c("Without SBP/DBP/HR","With SBP/DBP/HR"), ordered=TRUE)) %>% 
+  transmute(Drug,Adjustment, estimate, std.error, statistic, p.value, conf.low, conf.high) %>% 
+  mutate(across(.cols=estimate:conf.high, ~round(.,2)))->table1
+
+```
+
+
+```{r med-effect-table-2}
+table1 %>% 
+  kbl(caption = "Table S1: Coefficients of self-reported drugs") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+
+```{r}
+fits.df  %>% 
+  filter(term=="PriorMed") %>% 
+  filter(AdditionalMarkers==TRUE) %>% 
+  select(-AdditionalMarkers) %>% 
+  transmute(Drug, estimate, std.error, statistic, p.value, conf.low, conf.high) %>% 
+  mutate(across(.cols=estimate:conf.high, ~round(.,2))) -> table2
+```
+
+```{r med-effect-table}
+table2 %>% 
+  kbl(caption = "Table 1: Coefficients of self-reported drugs") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+
+## Statins
+
+```{r}
+statin.df <- dfs %>% 
+  filter(Drug=="Statins") %>% 
+  select(-Drug)
+```
+
+
+```{r}
+statin.fits.df <- fits.df %>% 
+  filter(Drug=="Statins")
+```
+
+
+```{r statin-fit-table}
+get_pretty_fit_table(statin.fits.df, "Statins")
+```
+
+```{r statin-fit-forest, fig.width=10, fig.height=5}
+get_pretty_fit_forest_plot(statin.fits.df) ->p
+p
+```
+
+
+```{r statin-fit-glance}
+statin.fits.df %>% 
+  get_fit_glance
+```
+
+
+```{r statin-table}
+generate_table.self.reported(statin.df, "Statins")
+```
+
+```{r statin-age-gap-histograms}
+statin.df %>% 
+  get_stratified_age_gap_histogram("Statins")
+```
+
+```{r statin-age-gap-quantiles}
+statin.df %>% 
+  get_stratified_age_gap_quantiles("Statins")
+```
+
+### Lasso
+
+```{r}
+statin.glmnet.cv <- fits.glm[["Statins"]]
+```
+
+
+```{r statin-lasso-plot}
+plot(statin.glmnet.cv) 
+```
+
+```{r}
+coef(statin.glmnet.cv, c(statin.glmnet.cv$lambda.min,
+                   statin.glmnet.cv$lambda.1se))
+```
+
+
+## Metformin
+
+
+
+```{r}
+metformin.df <- dfs %>% 
+  filter(Drug=="Metformin") %>% 
+  select(-Drug)
+```
+
+
+```{r}
+metformin.fits.df <- fits.df %>% 
+  filter(Drug=="Metformin")
+```
+
+
+```{r metformin-fit-table}
+get_pretty_fit_table(metformin.fits.df, "Metformin")
+```
+
+```{r metformin-fit-forest, fig.width=10, fig.height=5}
+get_pretty_fit_forest_plot(metformin.fits.df) ->p
+p
+```
+
+
+```{r metformin-fit-glance}
+metformin.fits.df %>% 
+  get_fit_glance
+```
+
+
+```{r metformin-table}
+generate_table.self.reported(metformin.df, "Metformin")
+```
+
+```{r metformin-age-gap-histograms}
+metformin.df %>% 
+  get_stratified_age_gap_histogram("Metformin")
+```
+
+```{r metformin-age-gap-quantiles}
+metformin.df %>% 
+    get_stratified_age_gap_quantiles("Metformin")
+```
+
+
+
+
+### Lasso
+
+```{r}
+metformin.glmnet.cv <- fits.glm[["Metformin"]]
+```
+
+
+```{r statin-metformin-plot}
+plot(metformin.glmnet.cv) 
+```
+
+```{r}
+coef(metformin.glmnet.cv, c(metformin.glmnet.cv$lambda.min,
+                   metformin.glmnet.cv$lambda.1se))
+```
+
+## Digoxin
+
+
+
+```{r}
+digoxin.df <- dfs %>% 
+  filter(Drug=="Digoxin") %>% 
+  select(-Drug)
+```
+
+
+```{r}
+digoxin.fits.df <- fits.df %>% 
+  filter(Drug=="Digoxin")
+```
+
+
+```{r digoxin-fit-table}
+get_pretty_fit_table(digoxin.fits.df, "Digoxin")
+```
+
+```{r digoxin-fit-forest, fig.width=10, fig.height=5}
+get_pretty_fit_forest_plot(digoxin.fits.df) ->p
+p
+```
+
+
+```{r digoxin-fit-glance}
+digoxin.fits.df %>% 
+  get_fit_glance
+```
+
+
+```{r digoxin-table}
+generate_table.self.reported(digoxin.df, "Digoxin")
+```
+
+```{r digoxin-age-gap-histograms}
+digoxin.df %>% 
+  get_stratified_age_gap_histogram("Digoxin")
+```
+
+```{r digoxin-age-gap-quantiles}
+digoxin.df %>% 
+  get_stratified_age_gap_quantiles("Digoxin")
+```
+
+
+
+
+### Lasso
+
+```{r}
+digoxin.glmnet.cv <- fits.glm[["Digoxin"]]
+```
+
+
+```{r digoxin-lasso-plot}
+plot(digoxin.glmnet.cv) 
+```
+
+```{r}
+coef(digoxin.glmnet.cv, c(digoxin.glmnet.cv$lambda.min,
+                   digoxin.glmnet.cv$lambda.1se))
+```
+
+## Beta Blocker
+
+
+
+```{r}
+BB.df <- dfs %>% 
+  filter(Drug=="BB") %>% 
+  select(-Drug)
+```
+
+
+```{r}
+BB.fits.df <- fits.df %>% 
+  filter(Drug=="BB")
+```
+
+
+```{r BB-fit-table}
+get_pretty_fit_table(BB.fits.df, "Beta Blocker")
+```
+
+```{r BB-fit-forest, fig.width=10, fig.height=5}
+get_pretty_fit_forest_plot(BB.fits.df) ->p
+p
+```
+
+```{r BB-fit-glance}
+BB.fits.df %>% 
+  get_fit_glance
+```
+
+
+```{r BB-table}
+generate_table.self.reported(BB.df, "BB")
+```
+
+
+```{r BB-age-gap-histograms}
+BB.df %>% 
+ get_stratified_age_gap_histogram("Beta Blockers")
+```
+
+```{r BB-age-gap-quantiles}
+BB.df %>% 
+ get_stratified_age_gap_quantiles("Beta Blockers")
+```
+
+
+### Lasso
+
+```{r}
+BB.glmnet.cv <- fits.glm[["BB"]]
+```
+
+
+```{r BB-lasso-plot}
+plot(BB.glmnet.cv) 
+```
+
+```{r}
+coef(BB.glmnet.cv, c(BB.glmnet.cv$lambda.min,
+                   BB.glmnet.cv$lambda.1se))
+```
+
+
+## ACEi
+
+
+
+```{r}
+ACEi.df <- dfs %>% 
+  filter(Drug=="ACEi") %>% 
+  select(-Drug)
+```
+
+
+```{r}
+ACEi.fits.df <- fits.df %>% 
+  filter(Drug=="ACEi")
+```
+
+
+```{r ACEi-fit-table}
+get_pretty_fit_table(ACEi.fits.df, "ACEi")
+```
+
+```{r ACEi-fit-forest, fig.width=10, fig.height=5}
+get_pretty_fit_forest_plot(ACEi.fits.df) ->p
+p
+```
+
+
+```{r ACEi-fit-glance}
+ACEi.fits.df %>% 
+  get_fit_glance
+```
+
+
+```{r ACEi-table}
+generate_table.self.reported(ACEi.df, "ACEi")
+```
+
+```{r ACEi-age-gap-histograms}
+ACEi.df %>% 
+  get_stratified_age_gap_histogram("ACEi")
+```
+
+```{r ACEi-age-gap-quantiles}
+ACEi.df %>% 
+   get_stratified_age_gap_quantiles("ACEi")
+```
+
+
+### Lasso
+
+```{r}
+ACEi.glmnet.cv <- fits.glm[["ACEi"]]
+```
+
+
+```{r ACEi-lasso-plot}
+plot(ACEi.glmnet.cv) 
+```
+
+```{r}
+coef(ACEi.glmnet.cv, c(ACEi.glmnet.cv$lambda.min,
+                   ACEi.glmnet.cv$lambda.1se))
+```
+
+## ARB
+
+
+
+```{r}
+ARB.df <- dfs %>% 
+  filter(Drug=="ARB") %>% 
+  select(-Drug)
+```
+
+
+```{r}
+ARB.fits.df <- fits.df %>% 
+  filter(Drug=="ARB")
+```
+
+
+```{r ARB-fit-table}
+get_pretty_fit_table(ARB.fits.df, "ARB")
+```
+
+```{r ARB-fit-forest, fig.width=10, fig.height=5}
+get_pretty_fit_forest_plot(ARB.fits.df) ->p
+p
+```
+
+
+```{r ARB-fit-glance}
+ARB.fits.df %>% 
+  get_fit_glance
+```
+
+
+```{r ARB-table} 
+generate_table.self.reported(ARB.df, "ARB")
+```
+
+```{r ARB-age-gap-histograms}
+ARB.df %>% 
+  get_stratified_age_gap_histogram("ARB")
+```
+
+```{r ARB-age-gap-quantiles}
+ARB.df %>% 
+    get_stratified_age_gap_quantiles("ARB")
+```
+
+### Lasso
+
+```{r}
+ARB.glmnet.cv <- fits.glm[["ARB"]]
+```
+
+
+```{r ARB-lasso-plot}
+plot(ARB.glmnet.cv) 
+```
+
+```{r}
+coef(ARB.glmnet.cv, c(ARB.glmnet.cv$lambda.min,
+                   ARB.glmnet.cv$lambda.1se))
+```
+
+## CCB
+
+
+
+```{r}
+CCB.df <- dfs %>% 
+  filter(Drug=="CCB") %>% 
+  select(-Drug)
+```
+
+
+```{r}
+CCB.fits.df <- fits.df %>% 
+  filter(Drug=="CCB")
+```
+
+
+```{r CCB-fit-table}
+get_pretty_fit_table(CCB.fits.df, "CCB")
+```
+
+```{r CCB-fit-forest, fig.width=10, fig.height=5}
+get_pretty_fit_forest_plot(CCB.fits.df) ->p
+p
+```
+
+```{r CCB-fit-glance}
+CCB.fits.df %>% 
+  get_fit_glance
+```
+
+
+```{r CCB-table}
+generate_table.self.reported(CCB.df, "CCB")
+```
+
+```{r CCB-age-gap-histograms}
+CCB.df %>% 
+  get_stratified_age_gap_histogram("CCB")
+```
+
+```{r CCB-age-gap-quantiles}
+CCB.df %>% 
+  get_stratified_age_gap_quantiles("CCB")
+```
+
+
+### Lasso
+
+```{r}
+CCB.glmnet.cv <- fits.glm[["CCB"]]
+```
+
+
+```{r CCB-lasso-plot}
+plot(CCB.glmnet.cv) 
+```
+
+```{r}
+coef(CCB.glmnet.cv, c(CCB.glmnet.cv$lambda.min,
+                   CCB.glmnet.cv$lambda.1se))
+```
+
+## Diuretics
+
+
+
+```{r}
+diuretics.df <- dfs %>% 
+  filter(Drug=="Diuretics") %>% 
+  select(-Drug)
+```
+
+
+```{r}
+diuretics.fits.df <- fits.df %>% 
+  filter(Drug=="Diuretics")
+```
+
+
+```{r diuretics-fit-table}
+get_pretty_fit_table(diuretics.fits.df, "Diuretics")
+```
+
+```{r diuretics-fit-forest, fig.width=10, fig.height=5}
+get_pretty_fit_forest_plot(diuretics.fits.df) ->p
+p
+```
+
+
+```{r diuretics-fit-glance}
+diuretics.fits.df %>% 
+  get_fit_glance
+```
+
+
+```{r diuretics-table}
+generate_table.self.reported(diuretics.df, "diuretics")
+```
+
+```{r diuretics-age-gap-histograms}
+diuretics.df %>% 
+  get_stratified_age_gap_histogram("Diuretics")
+```
+
+```{r diuretics-age-gap-quantiles}
+diuretics.df %>% 
+ get_stratified_age_gap_quantiles("Diuretics")
+```
+
+
+### Lasso
+
+```{r}
+diuretics.glmnet.cv <- fits.glm[["Diuretics"]]
+```
+
+
+```{r diuretics-lasso-plot}
+plot(diuretics.glmnet.cv) 
+```
+
+```{r}
+coef(diuretics.glmnet.cv, c(diuretics.glmnet.cv$lambda.min,
+                   diuretics.glmnet.cv$lambda.1se))
+```
+
+## Self-reported drugs used
+
+```{r self-reported-drug-table}
+read_csv("../data/Derived/self_reported_drugs_used.csv")
+```
+
