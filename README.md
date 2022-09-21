@@ -21,7 +21,7 @@ The steps involved in this process are described in this repository.
 
 4. **Genetic analysis**
 - Assessing associations between cardiovascular age delta and genetic common variants. [COMMON VARIANT ANALYSIS NEEDS TO BE UPLOADED- chbender]
-- Assessing associations between cardiovascular age delta and genetic rare variants [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis) (update once neater structure)
+- Assessing associations between cardiovascular age delta and genetic rare variants [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis/regenie)
 - Computation of Polygenic Risk Score (PRS) [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis/prs).
 
 5. **PheWAS**
