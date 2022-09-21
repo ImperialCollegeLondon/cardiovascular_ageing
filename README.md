@@ -28,7 +28,7 @@ The steps involved in this process are described in this repository.
 - Assessing associations between cardiovascular age delta PRS and phenotypes from the UK Biobank dataset using PheCodes. [PENDING - seanzheng33]
 
 ## License
-Distributed under an MIT LICENSE license. See LICENSE for more information.
+Distributed under an MIT LICENSE license.
 
 ## Citation
 TBC
