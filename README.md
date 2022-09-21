@@ -20,7 +20,7 @@ The steps involved in this process are described in this repository.
 - Medication analysis [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis/self-rep-med-analysis)
 
 4. **Genetic analysis**
-- Assessing associations between cardiovascular age delta and genetic common variants. [COMMON VARIANT ANALYSIS NEEDS TO BE UPLOADED- chbender]
+- Assessing associations between cardiovascular age delta and genetic common variants [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis/common%20variant%20analysis)
 - Assessing associations between cardiovascular age delta and genetic rare variants [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis/regenie)
 - Computation of Polygenic Risk Score (PRS) [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis/prs).
 
