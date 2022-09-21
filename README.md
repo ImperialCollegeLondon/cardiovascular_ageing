@@ -16,16 +16,16 @@ The steps involved in this process are described in this repository.
 
 3. **Phenotype analysis**
 - Assessing associations between cardiovascular age delta and categorical (e.g. presence of disease) / continuous risk factors (e.g. amount of alcohol consumed per day) [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis)
-- Assessing associations between cardiovascular age delta and mortality [NEEDS TO BE UPLOADED- johannamielke]
+- Assessing associations between cardiovascular age delta and mortality [PENDING - JohannaMiel]
 - Medication analysis [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis/self-rep-med-analysis)
 
 4. **Genetic analysis**
 - Assessing associations between cardiovascular age delta and genetic common variants [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis/common%20variant%20analysis)
 - Assessing associations between cardiovascular age delta and genetic rare variants [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis/regenie)
-- Computation of Polygenic Risk Score (PRS) [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis/prs).
+- Computation of Polygenic Risk Score (PRS) [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis/prs)
 
 5. **PheWAS**
-- Assessing associations between cardiovascular age delta PRS and phenotypes from the UK Biobank dataset using PheCodes. [NEEDS TO BE UPLOADED- seanzheng33]
+- Assessing associations between cardiovascular age delta PRS and phenotypes from the UK Biobank dataset using PheCodes. [PENDING - seanzheng33]
 
 ## License
 Distributed under an MIT LICENSE license. See LICENSE for more information.
