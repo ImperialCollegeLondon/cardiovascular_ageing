@@ -25,7 +25,7 @@ The steps involved in this process are described in this repository.
 - Computation of Polygenic Risk Score (PRS) [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/genetic%20analysis/prs).
 
 5. **PheWAS**
-- Assessing associations between cardiovascular age delta PRS and an unbiased selection of phenotypes from the UK Biobank dataset. [NEEDS TO BE UPLOADED- seanzheng33]
+- Assessing associations between cardiovascular age delta PRS and phenotypes from the UK Biobank dataset using PheCodes. [NEEDS TO BE UPLOADED- seanzheng33]
 
 ## License
 Distributed under an MIT LICENSE license. See LICENSE for more information.
