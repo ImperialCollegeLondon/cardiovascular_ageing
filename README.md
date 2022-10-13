@@ -14,7 +14,7 @@ The steps involved in this process are described in this repository.
 - CatBoost model to predict age from a dataset comprising cardiac MRI derived phenotypes. Subsequent bias correction on these predictions and cardiovascular age gap ("cardiovascular age delta") is generated for each subject.  [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/predicting%20cardiac%20age)
 
 3. **Phenotype analysis**
-- Assessing associations between cardiovascular age delta and categorical (e.g. presence of disease) / continuous risk factors (e.g. amount of alcohol consumed per day) [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis)
+- Assessing associations between cardiovascular age delta and categorical (e.g. presence of disease) / continuous risk factors (e.g. amount of alcohol consumed per day) [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis/associations_cage_delta)
 - Assessing associations between cardiovascular age delta and mortality [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis/mace%20risk%20prediction)
 - Medication analysis [code](https://github.com/ImperialCollegeLondon/cardiovascular_ageing/tree/main/phenotype%20analysis/self-rep-med-analysis)
 
