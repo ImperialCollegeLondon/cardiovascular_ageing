@@ -30,4 +30,4 @@ The steps involved in this process are described in this repository.
 Distributed under an MIT LICENSE license.
 
 ## Citation
-Shah M, Inacio MH de A, Lu C, Schiratti P-R, Zheng SL, Clement A, Bai W, King AP, Ware JS, Wilkins MR, Mielke J, Elci E, Kryukov I, McGurk KA, Bender C, Freitag DF, O'Regan DP. Environmental and genetic predictors of human cardiovascular ageing. _medRxiv_. 2022. doi: [10.1101/2022.10.03.22280042](https://doi.org/10.1101/2022.10.03.22280042)
+Shah M, Inacio MH de A, Lu C, Schiratti P-R, Zheng SL, Clement A, Bai W, King AP, Ware JS, Wilkins MR, Mielke J, Elci E, Kryukov I, McGurk KA, Bender C, Freitag DF, O'Regan DP. Environmental and genetic predictors of human cardiovascular ageing. _Nature Communications_. 2023. 
